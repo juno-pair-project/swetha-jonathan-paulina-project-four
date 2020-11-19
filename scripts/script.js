@@ -194,14 +194,14 @@ flixmix.filteredMovies = (array) => {
     });
 };
 
-// Function to get trailer for ultimate movie
+// Function to get find the trailer for ultimate movie from all movie videos returned
 flixmix.movieTrailer = (trailerRes) => {
     const trailerIndex = trailerRes.results;
-    console.log(trailerIndex);
-    for (let i = 0; i < trailerRes.results.length; i++) {
+    // console.log(trailerIndex);
+    for (let i = 0; i < trailerIndex.length; i++) {
         if (trailerIndex[i].type === 'Trailer') {
             flixmix.youtubeKey = trailerIndex[i].key;
-            console.log(flixmix.youtubeKey);
+            // console.log(flixmix.youtubeKey);
         }
     }
 }
