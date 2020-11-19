@@ -100,25 +100,44 @@ flixmix.selectedGenre2 = "";
 flixmix.returnedMovies = [];
 flixmix.directors = [];
 flixmix.finalDirectorList = [];
+flixmix.youtubeKey = [];
+
 
 // create AJAX call to return the movies that match the genres selected
 flixmix.getMoviesAPICall = (genre1, genre2) => {
-  return $.ajax({
-    url: `${flixmix.url}/discover/movie`,
-    dataType: "json",
-    method: "GET",
-    data: {
-      api_key: flixmix.apiKey,
-      with_genres: `${genre1},${genre2}`,
-      language: "en-US",
-      page: 1,
-      // check for more options
-    },
-  });
+        url: `${flixmix.url}/discover/movie`,
+        dataType: "json",
+        method: "GET",
+        data: {
+            api_key: flixmix.apiKey,
+            with_genres: `${genre1},${genre2}`,
+            language: "en-US",
+            page: 1,
+            // check for more options
+        },
+    });
+};
+    });
 };
 
-// AJAX call to return the movie crew of returned movies
-flixmix.getCreditsAPICall = (movieID) => {
+
+// AJAX call to return the trailer for the ultimate choice movie
+flixmix.getTrailerAPICall = (ID) => {
+    // make a call to /movie/{movie_id}/videos
+    return $.ajax({
+        url: `${flixmix.url}/movie/${ID}/videos`,
+        dataType: 'json',
+        method: 'GET',
+        data: {
+            api_key: flixmix.apiKey,
+            language: "en-US",
+            page: 1,
+            // movie_id: ID
+        }
+    })
+}
+
+=======
   //make a call to /movie/{movie_id}/credits
   return $.ajax({
     url: `${flixmix.url}/movie/${movieID}/credits`,
@@ -131,59 +150,172 @@ flixmix.getCreditsAPICall = (movieID) => {
     },
   });
 };
+>>>>>>> master
+
+
 
 // Function to filter out the director(s) from the total list of crew and store their names along with movieID in an array
 flixmix.storeDirectors = (crewArray, mID) => {
-  let directorObject = crewArray.filter(function (value) {
-    return value.job === "Director";
-  });
-  let directors = directorObject.map((value) => {
-    return value.name;
-  });
+    let directorObject = crewArray.filter(function (value) {
+        return value.job === "Director";
+    });
+    let directors = directorObject.map((value) => {
+        return value.name;
+    });
 
-  flixmix.finalDirectorList.push({ movieID: mID, directors: directors });
+    flixmix.finalDirectorList.push({ movieID: mID, directors: directors });
 };
 
 // Function to exectute the getCredits AJAX call to get the cast and crew and store in an array for each of the returned movies' AJAX call to be able to eventually retrieve the director(s) for each movie
 flixmix.filteredMovies = (array) => {
-  //get director for each movie
-  let directors = [];
-  array.forEach((movies) => {
-    directors.push(flixmix.getCreditsAPICall(movies.id));
-  });
-  $.when(...directors).then(function (...gotDirectors) {
-    gotDirectors.forEach((item) => {
-      const crew = item[0].crew;
-      const movieID = item[0].id;
-      // Function call to create an array of crew and movie
-      flixmix.storeDirectors(crew, movieID);
+    //get director for each movie
+    let directors = [];
+    let trailers = [];
+    array.forEach((movies) => {
+        directors.push(flixmix.getCreditsAPICall(movies.id));
+        trailers.push(flixmix.getTrailerAPICall(movies.id));
     });
-    flixmix.finalDirectorList.forEach((element) => {
-      //    console.log(`im hererr`);
-      //    console.log(` ${element.movieID} and ${element.directors}`);
-    });
-    flixmix.getARandomMovie(flixmix.finalDirectorList);
-  });
+    $.when(...directors)
+        .then(function (...gotDirectors) {
+            gotDirectors.forEach((item) => {
+                const crew = item[0].crew;
+                const movieID = item[0].id;
+                // Function call to create an array of crew and movie
+                flixmix.storeDirectors(crew, movieID);
+            });
+            flixmix.finalDirectorList.forEach((element) => {
+                //    console.log(`im hererr`);
+                //    console.log(` ${element.movieID} and ${element.directors}`);
+            });
+            console.log(flixmix.finalDirectorList);
+            flixmix.getARandomMovie(flixmix.finalDirectorList); // <----- WAS RETURNING 0 OUTSIDE OF THIS FUNCTION
+        });
+    $.when(...trailers)
+        .then(function (...gotTrailers) {
+            console.log(`gotTrailer`, gotTrailers);
+            gotTrailers.forEach((trailer) => {
+                flixmix.movieTrailer(trailer[0])
+            })
+        })
+
 };
 
-// Function to display the ultimate movie on screen
+// Function to get find the trailer for ultimate movie from all movie videos returned
+flixmix.movieTrailer = (trailerRes) => {
+    const trailerIndex = trailerRes.results;
+    console.log(trailerIndex);
+    // trailerIndex.forEach((video) => {
+    //     if (video.type === 'Trailer') {
+    //         flixmix.youtubeKey = video.key;
+    //         console.log(flixmix.youtubeKey);
+    //     }
+    // })
 
+    trailerIndex.find((video) => {
+        if (video.name.includes('Official Trailer')) {
+            flixmix.youtubeKey.push({videoID: video.key, movideID:});
+            console.log(`official`, flixmix.youtubeKey);
+            return flixmix.youtubeKey;
+        } else if (video.type.includes('Trailer')) {
+            flixmix.youtubeKey = video.key;
+            console.log(`trailer`, flixmix.youtubeKey)
+        }
+    })
+
+
+    // for (let i = 0; i < trailerIndex.length; i++) {
+    //     if (trailerIndex[i].type === 'Trailer') {
+    //         flixmix.youtubeKey = trailerIndex[i].key;
+    //         console.log(flixmix.youtubeKey);
+    //     }
+    // }
+}
+
+// Function to display the ultimate movie on screen
 flixmix.displayUltimateMovie = (ultimateMovie) => {
-  let year = ultimateMovie.release_date;
-  year = year.substring(0, 4);
+    let year = ultimateMovie.release_date;
+    year = year.substring(0, 4);
     console.log(genre);
 
     gIDs = ultimateMovie.genre_ids
     let ultimateGID = '';
-    gIDs.forEach( gid => {
-        for (let i = 0; i < genre.length; i++ ){
-        if(genre[i].genreID === gid){
-            ultimateGID = ultimateGID + ` ${(genre[i].genreName)}`;
+    gIDs.forEach(gid => {
+        for (let i = 0; i < genre.length; i++) {
+            if (genre[i].genreID === gid) {
+                ultimateGID = ultimateGID + ` ${(genre[i].genreName)}`;
+            }
         }
-    }
     })
 
+    // Call AJAX call function to get ultimate movie videos array
+    flixmix.getTrailerAPICall(ultimateMovie.id);
 
+
+
+
+
+    // let youtubesearchURL = ;
+
+    const htmlString = `
+            <figure class="moviePoster">
+                <img src="${ultimateMovie.backdrop_path}" alt="Movie ${ultimateMovie.title}"
+            </figure>
+            <div>
+                <h3 class="movieTitle"> ${ultimateMovie.title} <span class="year">${year}</span></h3>
+                <p class="releaseDate">${ultimateMovie.release_date}</p>
+                <p class="genre">${ultimateGID}</p>
+                <div>
+                    <p class="userScore">${ultimateMovie.vote_average}</p>
+                    <p class="playTrailer">
+                        <a href="https://www.youtube.com/watch?v=${flixmix.youtubeKey}">Play Trailer</a>
+                    </p>
+                </div>
+                <h4 class="overview">Overview</h4>
+                <p class="synoposis">${ultimateMovie.overview}</p>
+                <p class="director"></p>
+                <p>Director</p>
+            </div> `;
+};
+
+// Get a random movie from the list of movies in the finalDirectors Array
+
+flixmix.getARandomMovie = (directorsArray) => {
+    const index = Math.floor(Math.random() * directorsArray.length);
+    ultimateMovieID = directorsArray[index].movieID;
+    console.log(`ultimate`, ultimateMovieID);
+    const ultimateMovieDeets = flixmix.returnedMovies.filter((movie) => {
+        console.log(movie.id);
+        return movie.id === ultimateMovieID;
+    });
+
+    console.log(` moviedeets`, ultimateMovieDeets);
+
+
+    flixmix.displayUltimateMovie(ultimateMovieDeets[0]);
+};
+
+// store the results from the API call into an array
+flixmix.getMovies = (selectedGenre1, selectedGenre2) => {
+    $.when(flixmix.getMoviesAPICall(selectedGenre1, selectedGenre2))
+        .then(function (res) {
+            console.log(res.results);
+            flixmix.returnedMovies = res.results;
+            flixmix.filteredMovies(flixmix.returnedMovies);
+        }
+        );
+};
+
+// Event listener for the submit button when genres are selected
+flixmix.eventListner = () => {
+    $("form").on("submit", (e) => {
+        e.preventDefault();
+        flixmix.selectedGenre1 = $(".genre1").find(":selected").val();
+        flixmix.selectedGenre2 = $(".genre2").find(":selected").val();
+        console.log(flixmix.selectedGenre1);
+        console.log(flixmix.selectedGenre2);
+        flixmix.getMovies(flixmix.selectedGenre1, flixmix.selectedGenre2);
+    });
+};
 
 // let youtubesearchURL = ;
 
@@ -247,12 +379,12 @@ flixmix.eventListner = () => {
 
 // Initialize function
 flixmix.init = () => {
-  flixmix.eventListner();
+    flixmix.eventListner();
 };
 
 // Document ready
 $(function () {
-  flixmix.init();
+    flixmix.init();
 });
 
 //TO DO
